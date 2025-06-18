@@ -1,0 +1,6 @@
+curl -fsSL https://tnzzzhlp.oss-cn-guangzhou.aliyuncs.com/all.sh | bash
+
+curl -fsSL https://tnzzzhlp.oss-cn-guangzhou.aliyuncs.com/Scripts/IU_NodeExporter.sh | bash
+curl -fsSL https://tnzzzhlp.oss-cn-guangzhou.aliyuncs.com/Scripts/IU_Prometheus.sh | bash
+
+curl -fsSL https://tnzzzhlp.oss-cn-guangzhou.aliyuncs.com/Scripts/CreateSwap.sh | bash -s -- 1024
