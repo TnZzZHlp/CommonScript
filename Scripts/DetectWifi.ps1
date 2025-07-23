@@ -11,7 +11,7 @@ $TargetWifiNames = @(
 $ServiceName = "sing-box"
 
 # 休眠间隔（秒）
-$CheckInterval = 30
+$CheckInterval = 10
 
 # 函数：获取当前连接的WiFi名称
 function Get-CurrentWifiName {
