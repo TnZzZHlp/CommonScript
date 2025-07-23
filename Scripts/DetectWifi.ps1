@@ -10,6 +10,9 @@ $TargetWifiNames = @(
 # sing-box服务名称
 $ServiceName = "sing-box"
 
+# 休眠间隔（秒）
+$CheckInterval = 30
+
 # 函数：获取当前连接的WiFi名称
 function Get-CurrentWifiName {
     try {
@@ -116,79 +119,86 @@ function Stop-ServiceSafely {
 Write-Host "========== WiFi检测和sing-box服务管理脚本 ==========" -ForegroundColor Cyan
 Write-Host "开始检测WiFi连接状态..." -ForegroundColor White
 
-# 获取当前WiFi名称
-$currentWifi = Get-CurrentWifiName
+function Main{
 
-if ($currentWifi) {
-    Write-Host "当前连接的WiFi: $currentWifi" -ForegroundColor Green
+    while($true){
+        # 获取当前WiFi名称
+        $currentWifi = Get-CurrentWifiName
 
-    # 检查是否在目标WiFi列表中
-    if ($TargetWifiNames -contains $currentWifi) {
-        Write-Host "当前WiFi '$currentWifi' 在监控列表中" -ForegroundColor Green
+        if ($currentWifi) {
+            Write-Host "当前连接的WiFi: $currentWifi" -ForegroundColor Green
 
-        # 检查sing-box服务状态
-        Write-Host "检查 '$ServiceName' 服务状态..." -ForegroundColor White
-        $serviceStatus = Get-ServiceStatus -ServiceName $ServiceName
+            # 检查是否在目标WiFi列表中
+            if ($TargetWifiNames -contains $currentWifi) {
+                Write-Host "当前WiFi '$currentWifi' 在监控列表中" -ForegroundColor Green
 
-        if ($serviceStatus) {
-            Write-Host "服务 '$ServiceName' 当前状态: $serviceStatus" -ForegroundColor Blue
+                # 检查sing-box服务状态
+                Write-Host "检查 '$ServiceName' 服务状态..." -ForegroundColor White
+                $serviceStatus = Get-ServiceStatus -ServiceName $ServiceName
 
-            if ($serviceStatus -eq "Running") {
-                Write-Host "服务 '$ServiceName' 正在运行中，准备停止..." -ForegroundColor Yellow
-                $stopResult = Stop-ServiceSafely -ServiceName $ServiceName
+                if ($serviceStatus) {
+                    Write-Host "服务 '$ServiceName' 当前状态: $serviceStatus" -ForegroundColor Blue
 
-                if ($stopResult) {
-                    Write-Host "操作完成：服务已成功停止" -ForegroundColor Green
+                    if ($serviceStatus -eq "Running") {
+                        Write-Host "服务 '$ServiceName' 正在运行中，准备停止..." -ForegroundColor Yellow
+                        $stopResult = Stop-ServiceSafely -ServiceName $ServiceName
+
+                        if ($stopResult) {
+                            Write-Host "操作完成：服务已成功停止" -ForegroundColor Green
+                        }
+                        else {
+                            Write-Host "操作失败：无法停止服务" -ForegroundColor Red
+                        }
+                    }
+                    elseif ($serviceStatus -eq "Stopped") {
+                        Write-Host "服务 '$ServiceName' 已经停止" -ForegroundColor Green
+                    }
+                    else {
+                        Write-Host "服务 '$ServiceName' 状态异常: $serviceStatus" -ForegroundColor Yellow
+                        Write-Host "尝试停止服务..." -ForegroundColor Yellow
+                        Stop-ServiceSafely -ServiceName $ServiceName
+                    }
                 }
-                else {
-                    Write-Host "操作失败：无法停止服务" -ForegroundColor Red
-                }
-            }
-            elseif ($serviceStatus -eq "Stopped") {
-                Write-Host "服务 '$ServiceName' 已经停止" -ForegroundColor Green
             }
             else {
-                Write-Host "服务 '$ServiceName' 状态异常: $serviceStatus" -ForegroundColor Yellow
-                Write-Host "尝试停止服务..." -ForegroundColor Yellow
-                Stop-ServiceSafely -ServiceName $ServiceName
+                Write-Host "当前WiFi '$currentWifi' 不在监控列表中" -ForegroundColor Yellow
+                Write-Host "监控的WiFi列表: $($TargetWifiNames -join ', ')" -ForegroundColor Gray
+
+                # 检查sing-box服务状态
+                Write-Host "检查 '$ServiceName' 服务状态..." -ForegroundColor White
+                $serviceStatus = Get-ServiceStatus -ServiceName $ServiceName
+
+                if ($serviceStatus) {
+                    Write-Host "服务 '$ServiceName' 当前状态: $serviceStatus" -ForegroundColor Blue
+
+                    if ($serviceStatus -eq "Stopped") {
+                        Write-Host "服务 '$ServiceName' 已停止，准备启动..." -ForegroundColor Yellow
+                        $startResult = Start-ServiceSafely -ServiceName $ServiceName
+
+                        if ($startResult) {
+                            Write-Host "操作完成：服务已成功启动" -ForegroundColor Green
+                        }
+                        else {
+                            Write-Host "操作失败：无法启动服务" -ForegroundColor Red
+                        }
+                    }
+                    elseif ($serviceStatus -eq "Running") {
+                        Write-Host "服务 '$ServiceName' 已经在运行中" -ForegroundColor Green
+                    }
+                    else {
+                        Write-Host "服务 '$ServiceName' 状态异常: $serviceStatus" -ForegroundColor Yellow
+                        Write-Host "尝试启动服务..." -ForegroundColor Yellow
+                        Start-ServiceSafely -ServiceName $ServiceName
+                    }
+                }
             }
         }
-    }
-    else {
-        Write-Host "当前WiFi '$currentWifi' 不在监控列表中" -ForegroundColor Yellow
-        Write-Host "监控的WiFi列表: $($TargetWifiNames -join ', ')" -ForegroundColor Gray
-        
-        # 检查sing-box服务状态
-        Write-Host "检查 '$ServiceName' 服务状态..." -ForegroundColor White
-        $serviceStatus = Get-ServiceStatus -ServiceName $ServiceName
-
-        if ($serviceStatus) {
-            Write-Host "服务 '$ServiceName' 当前状态: $serviceStatus" -ForegroundColor Blue
-
-            if ($serviceStatus -eq "Stopped") {
-                Write-Host "服务 '$ServiceName' 已停止，准备启动..." -ForegroundColor Yellow
-                $startResult = Start-ServiceSafely -ServiceName $ServiceName
-
-                if ($startResult) {
-                    Write-Host "操作完成：服务已成功启动" -ForegroundColor Green
-                }
-                else {
-                    Write-Host "操作失败：无法启动服务" -ForegroundColor Red
-                }
-            }
-            elseif ($serviceStatus -eq "Running") {
-                Write-Host "服务 '$ServiceName' 已经在运行中" -ForegroundColor Green
-            }
-            else {
-                Write-Host "服务 '$ServiceName' 状态异常: $serviceStatus" -ForegroundColor Yellow
-                Write-Host "尝试启动服务..." -ForegroundColor Yellow
-                Start-ServiceSafely -ServiceName $ServiceName
-            }
+        else {
+            Write-Host "无法获取当前WiFi连接信息" -ForegroundColor Red
         }
+
+        Start-Sleep $CheckInterval
     }
 }
-else {
-    Write-Host "无法获取当前WiFi连接信息" -ForegroundColor Red
-}
 
-Write-Host "`n脚本执行完成" -ForegroundColor Cyan
+Main
